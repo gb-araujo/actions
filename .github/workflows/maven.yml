@@ -1,32 +1,54 @@
-name: Java CI
+name: Build and Analyze with SonarQube
 
 on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
-  build:
+  sonar-analysis:
     runs-on: ubuntu-latest
 
+    services:
+      sonar:
+        image: sonarqube:latest
+        ports:
+          - 9000:9000
+        options: >-
+          --health-cmd="curl -f http://localhost:9000 || exit 1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=20
+        env:
+          SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+
     steps:
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Setup JDK
+      - name: Set up JDK
         uses: actions/setup-java@v3
         with:
           distribution: "temurin"
           java-version: "17"
 
-      - name: Install Dependencies and Test
-        run: mvn install
+      - name: Wait for SonarQube to be Ready
+        run: |
+          echo "Waiting for SonarQube to be ready..."
+          for i in {1..30}; do
+            if curl -s http://localhost:9000/api/system/health | grep -q '"health":"GREEN"'; then
+              echo "SonarQube is ready!";
+              break;
+            fi
+            echo "Waiting...";
+            sleep 5;
+          done
 
-      - name: Run SonarQube Analysis
-        env:
-          SONAR_HOST_URL: http://localhost:9000
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn sonar:sonar
+      - name: Build and Analyze
+        run: |
+          mvn clean verify sonar:sonar \
+            -Dsonar.projectKey=test-connection \
+            -Dsonar.projectName="test-connection" \
+            -Dsonar.host.url=http://localhost:9000 \
+            -Dsonar.login=admin \
+            -Dsonar.password=admin

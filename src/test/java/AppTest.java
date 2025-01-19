@@ -1,18 +1,16 @@
 import java.sql.Connection;
+import java.sql.SQLException;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.fail;
 import org.junit.jupiter.api.Test;
 
 import com.example.DatabaseConnection;
 
 public class AppTest {
     @Test
-    void testDatabaseConnection() {
+    void testDatabaseConnection() throws SQLException {
         try (Connection conn = DatabaseConnection.connect()) {
             assertNotNull(conn, "Conexão deve ser estabelecida");
-        } catch (Exception e) {
-            fail("Falha na conexão: " + e.getMessage());
-        }
+        } 
     }
 }
